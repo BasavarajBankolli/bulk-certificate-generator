@@ -18,6 +18,8 @@ from app.db import models  # noqa: F401  (registers tables on Base.metadata)
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.schemas.job import JobCreate
+from app.services.job_service import JobService
 from app.services.storage import LocalStorage
 
 
@@ -102,3 +104,10 @@ def job_payload(recipient_count: int = 2, **overrides: object) -> dict:
     }
     payload.update(overrides)
     return payload
+
+
+def create_job(db: Session, recipient_count: int = 2, **overrides: object) -> models.GenerationJob:
+    """Create a QUEUED job through JobService, exactly as the API would."""
+    request = JobCreate.model_validate(job_payload(recipient_count, **overrides))
+    job, _ = JobService(db, FakeQueue()).create_job(request, idempotency_key=None)
+    return job

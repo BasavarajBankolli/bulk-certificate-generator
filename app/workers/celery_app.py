@@ -4,7 +4,12 @@ from app.core.config import get_settings
 
 PROCESS_JOB_TASK = "process_job"
 
-celery_app = Celery("certificate_generator", broker=get_settings().redis_url)
+# `include` makes the worker import the task module; the API only publishes by task name.
+celery_app = Celery(
+    "certificate_generator",
+    broker=get_settings().redis_url,
+    include=["app.workers.tasks"],
+)
 
 celery_app.conf.update(
     task_serializer="json",
