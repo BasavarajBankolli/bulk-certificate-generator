@@ -1,0 +1,25 @@
+[project]
+name = "bulk-certificate-generator"
+version = "1.0.0"
+description = "Bulk Certificate Generator API (FastAPI + PostgreSQL + Celery)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest must set DATABASE_URL before importing the app.
+"tests/conftest.py" = ["E402"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's Depends/Query/Header defaults are the idiomatic way to declare parameters.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
