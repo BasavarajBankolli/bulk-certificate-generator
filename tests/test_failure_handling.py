@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,7 +22,7 @@ def _fail_for_one_recipient(data: CertificateData) -> bytes:
 
 
 def test_one_failure_out_of_ten_does_not_stop_the_job(
-    db_session: Session, storage: LocalStorage, tmp_path: Path
+    client: TestClient, db_session: Session, storage: LocalStorage, tmp_path: Path
 ) -> None:
     job = create_job(db_session, recipient_count=10)
 
@@ -44,3 +45,8 @@ def test_one_failure_out_of_ten_does_not_stop_the_job(
 
     assert job.status == JobStatus.PARTIALLY_COMPLETED
     assert (job.success_count, job.failure_count, job.total_count) == (9, 1, 10)
+
+    # And the API reports exactly what the assignment expects.
+    body = client.get(f"/api/v1/jobs/{job.id}").json()
+    assert body["status"] == "PARTIALLY_COMPLETED"
+    assert (body["successful"], body["failed"], body["pending"], body["progress"]) == (9, 1, 0, 100)

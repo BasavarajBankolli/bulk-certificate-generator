@@ -1,10 +1,13 @@
+import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Response, status
 
 from app.api.deps import get_job_service
+from app.db.models import CertificateStatus
+from app.schemas.certificate import CertificateListResponse, CertificateResponse
 from app.schemas.common import ErrorResponse
-from app.schemas.job import JobCreate, JobCreatedResponse
+from app.schemas.job import JobCreate, JobCreatedResponse, JobStatusResponse
 from app.services.job_service import JobService
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -42,3 +45,37 @@ def create_job(
         response.status_code = status.HTTP_200_OK
 
     return JobCreatedResponse(job_id=job.id, status=job.status, total=job.total_count)
+
+
+@router.get(
+    "/{job_id}",
+    response_model=JobStatusResponse,
+    summary="Get job status and progress",
+    responses={404: {"model": ErrorResponse, "description": "Job not found"}},
+)
+def get_job(job_id: uuid.UUID, service: JobService = Depends(get_job_service)) -> JobStatusResponse:
+    return JobStatusResponse.from_job(service.get_job(job_id))
+
+
+@router.get(
+    "/{job_id}/certificates",
+    response_model=CertificateListResponse,
+    summary="List the certificates of a job",
+    responses={404: {"model": ErrorResponse, "description": "Job not found"}},
+)
+def list_job_certificates(
+    job_id: uuid.UUID,
+    status_filter: Annotated[
+        CertificateStatus | None, Query(alias="status", description="Filter by status")
+    ] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    service: JobService = Depends(get_job_service),
+) -> CertificateListResponse:
+    certificates, total = service.list_certificates(job_id, status_filter, limit, offset)
+    return CertificateListResponse(
+        items=[CertificateResponse.from_certificate(c) for c in certificates],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

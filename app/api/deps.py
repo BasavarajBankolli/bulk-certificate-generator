@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_db
+from app.services.certificate_service import CertificateService
 from app.services.job_service import Enqueuer, JobService
 from app.services.storage import StorageBackend, create_storage
 from app.workers.celery_app import enqueue_process_job
@@ -26,3 +27,9 @@ def get_job_service(
     db: Session = Depends(get_db), enqueue: Enqueuer = Depends(get_enqueuer)
 ) -> JobService:
     return JobService(db, enqueue)
+
+
+def get_certificate_service(
+    db: Session = Depends(get_db), storage: StorageBackend = Depends(get_storage)
+) -> CertificateService:
+    return CertificateService(db, storage)

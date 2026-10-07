@@ -3,12 +3,12 @@ import logging
 import uuid
 from collections.abc import Callable
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import IdempotencyConflictError, QueueUnavailableError
-from app.db.models import Certificate, GenerationJob
+from app.core.exceptions import IdempotencyConflictError, JobNotFoundError, QueueUnavailableError
+from app.db.models import Certificate, CertificateStatus, GenerationJob
 from app.schemas.job import JobCreate
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,33 @@ class JobService:
         self._enqueue_or_discard(job)
         logger.info("Created job_id=%s with %d recipients", job.id, job.total_count)
         return job, True
+
+    def get_job(self, job_id: uuid.UUID) -> GenerationJob:
+        job = self._db.get(GenerationJob, job_id)
+        if job is None:
+            raise JobNotFoundError()
+        return job
+
+    def list_certificates(
+        self,
+        job_id: uuid.UUID,
+        status: CertificateStatus | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[Certificate], int]:
+        """One page of a job's certificates plus the total matching count."""
+        self.get_job(job_id)  # 404 for unknown jobs instead of an empty list
+
+        query = select(Certificate).where(Certificate.job_id == job_id)
+        if status is not None:
+            query = query.where(Certificate.status == status)
+
+        total = self._db.scalar(select(func.count()).select_from(query.subquery()))
+        # Ordering by (created_at, id) keeps pagination stable between requests.
+        page = self._db.scalars(
+            query.order_by(Certificate.created_at, Certificate.id).limit(limit).offset(offset)
+        )
+        return list(page), total
 
     def _find_by_idempotency_key(self, key: str) -> GenerationJob | None:
         return self._db.scalar(select(GenerationJob).where(GenerationJob.idempotency_key == key))
