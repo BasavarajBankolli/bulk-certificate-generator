@@ -12,6 +12,7 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.db import models  # noqa: F401  (registers tables on Base.metadata)
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
