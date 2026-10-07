@@ -1,0 +1,79 @@
+# Usage: cp .env.example .env && docker compose up --build
+# Credentials come from .env (never committed); compose refuses to start if they are missing.
+
+x-app: &app
+  build: .
+  image: bulk-certificate-generator:latest
+  environment:
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:?set in .env}:${POSTGRES_PASSWORD:?set in .env}@db:5432/${POSTGRES_DB:?set in .env}
+    REDIS_URL: redis://redis:6379/0
+    STORAGE_DIR: /app/storage
+    MAX_BATCH_SIZE: ${MAX_BATCH_SIZE:-1000}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies Alembic migrations, then exits. API and worker wait for it.
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *app
+    ports:
+      - "8000:8000"
+    volumes:
+      - certificates_data:/app/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    volumes:
+      # Same volume as the API: the worker writes PDFs, the API serves them.
+      - certificates_data:/app/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  certificates_data:
