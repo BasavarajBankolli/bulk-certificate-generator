@@ -1,6 +1,6 @@
 # Bulk Certificate Generator — High-Level Design
 
-Status: **Draft, awaiting approval**  ·  Date: 2026-10-07
+Status: **Approved** (implementation notes: see README)  ·  Date: 2026-10-07
 
 ---
 
