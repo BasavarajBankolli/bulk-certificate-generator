@@ -24,6 +24,20 @@ GOLD = HexColor("#B8860B")
 GREY = HexColor("#555555")
 
 
+def is_renderable(text: str) -> bool:
+    """True if the built-in PDF fonts can draw every character of ``text``.
+
+    Helvetica/Times only cover Latin characters (Windows-1252). Other scripts would be
+    drawn as empty boxes while the certificate still looked "successful", so callers
+    reject such text explicitly instead. (Embedding a Unicode TTF font would lift this.)
+    """
+    try:
+        text.encode("cp1252")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
 @dataclass(frozen=True)
 class CertificateData:
     certificate_id: uuid.UUID

@@ -2,9 +2,10 @@ import io
 import uuid
 from datetime import date
 
+import pytest
 from pypdf import PdfReader
 
-from app.templates.certificate import CertificateData, render_certificate
+from app.templates.certificate import CertificateData, is_renderable, render_certificate
 
 
 def _data(**overrides: object) -> CertificateData:
@@ -60,3 +61,17 @@ def test_accented_latin_characters_are_supported() -> None:
     text = _extract_text(render_certificate(_data(recipient_name="José Müller")))
 
     assert "José Müller" in text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("Alice", True),
+        ("José Müller", True),
+        ("O’Brien – Jr.", True),
+        ("张伟", False),
+        ("Ольга", False),
+    ],
+)
+def test_is_renderable(text: str, expected: bool) -> None:
+    assert is_renderable(text) is expected

@@ -104,12 +104,13 @@ def test_storage_failure_only_fails_that_certificate(db_session: Session, tmp_pa
     assert broken.storage_key is None
 
 
+@pytest.mark.parametrize("bad_name", ["   ", "张伟"])
 def test_invalid_stored_recipient_is_failed_not_crashing(
-    db_session: Session, storage: LocalStorage
+    db_session: Session, storage: LocalStorage, bad_name: str
 ) -> None:
     job = create_job(db_session, recipient_count=2)
     bad = _certificates(db_session, job.id)[0]
-    bad.recipient_name = "   "  # e.g. data corrupted after validation
+    bad.recipient_name = bad_name  # e.g. a row inserted without going through the API
     db_session.commit()
 
     GenerationService(db_session, storage).process_job(job.id)

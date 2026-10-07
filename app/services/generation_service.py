@@ -22,7 +22,7 @@ from app.db.models import (
     utcnow,
 )
 from app.services.storage import StorageBackend, certificate_key
-from app.templates.certificate import CertificateData, render_certificate
+from app.templates.certificate import CertificateData, is_renderable, render_certificate
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,8 @@ def _validate_recipient(certificate: Certificate) -> None:
         raise InvalidRecipientError("recipient name is empty")
     if not certificate.course.strip():
         raise InvalidRecipientError("course is empty")
+    if not (is_renderable(certificate.recipient_name) and is_renderable(certificate.course)):
+        raise InvalidRecipientError("text contains characters the certificate font cannot render")
 
 
 def _certificate_data(job: GenerationJob, certificate: Certificate) -> CertificateData:

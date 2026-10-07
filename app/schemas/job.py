@@ -5,9 +5,16 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 from app.core.config import get_settings
 from app.db.models import GenerationJob, JobStatus
+from app.templates.certificate import is_renderable
 
 # Certificates are normally issued for past or near-future events.
 MAX_DAYS_IN_FUTURE = 365
+
+
+def _ensure_renderable(value: str) -> str:
+    if not is_renderable(value):
+        raise ValueError("contains characters the certificate font cannot render")
+    return value
 
 
 class RecipientIn(BaseModel):
@@ -21,6 +28,11 @@ class RecipientIn(BaseModel):
     @classmethod
     def normalize_email(cls, email: str) -> str:
         return email.lower()
+
+    @field_validator("name", "course")
+    @classmethod
+    def printable_on_certificate(cls, value: str) -> str:
+        return _ensure_renderable(value)
 
 
 class JobCreate(BaseModel):
@@ -51,6 +63,11 @@ class JobCreate(BaseModel):
     event_name: str = Field(min_length=1, max_length=200)
     certificate_date: date
     recipients: list[RecipientIn] = Field(min_length=1)
+
+    @field_validator("event_name")
+    @classmethod
+    def printable_on_certificate(cls, value: str) -> str:
+        return _ensure_renderable(value)
 
     @field_validator("certificate_date")
     @classmethod

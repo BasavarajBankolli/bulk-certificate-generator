@@ -71,6 +71,10 @@ def test_create_job_stores_normalised_recipient_data(
             ),
             "Duplicate recipient",
         ),
+        (
+            job_payload(recipients=[{"name": "张伟", "email": "a@example.com", "course": "Py"}]),
+            "cannot render",
+        ),
         (job_payload(certificate_date="07-10-2026"), ""),
         (job_payload(event_name=""), ""),
     ],
@@ -81,6 +85,7 @@ def test_create_job_stores_normalised_recipient_data(
         "blank-name",
         "oversized-batch",
         "duplicate-recipient",
+        "unrenderable-name",
         "invalid-date",
         "empty-event-name",
     ],
