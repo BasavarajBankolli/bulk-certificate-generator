@@ -71,6 +71,8 @@ def test_accented_latin_characters_are_supported() -> None:
         ("O’Brien – Jr.", True),
         ("张伟", False),
         ("Ольга", False),
+        ("Alice\x05", False),
+        ("Alice\nBob", False),
     ],
 )
 def test_is_renderable(text: str, expected: bool) -> None:

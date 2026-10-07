@@ -30,7 +30,10 @@ def is_renderable(text: str) -> bool:
     Helvetica/Times only cover Latin characters (Windows-1252). Other scripts would be
     drawn as empty boxes while the certificate still looked "successful", so callers
     reject such text explicitly instead. (Embedding a Unicode TTF font would lift this.)
+    Control characters (tabs, newlines, NUL, ...) are rejected too.
     """
+    if not text.isprintable():
+        return False
     try:
         text.encode("cp1252")
     except UnicodeEncodeError:

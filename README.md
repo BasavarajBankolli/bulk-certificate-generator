@@ -30,7 +30,7 @@ carries on with the rest.
 - Storage behind a small interface (local disk today, S3-ready)
 - Consistent `{"detail": ...}` errors; no stack traces reach clients
 - Alembic migrations, Docker Compose (5 services, health checks, non-root containers)
-- 90 pytest tests that need no Redis, Celery or PostgreSQL by default
+- 92 pytest tests that need no Redis, Celery or PostgreSQL by default
 
 ## 3. Architecture
 
@@ -102,7 +102,7 @@ app/
     ├── celery_app.py            # Celery config + enqueue_process_job
     └── tasks.py                 # process_job task (thin wrapper)
 alembic/                         # env.py + versions/ (initial migration)
-tests/                           # 90 tests, see "Testing"
+tests/                           # 92 tests, see "Testing"
 docs/HLD.md                      # approved high-level design
 Dockerfile, docker-compose.yml, .env.example
 requirements.txt, requirements-dev.txt, pyproject.toml (ruff + pytest config)
@@ -416,7 +416,7 @@ one rather than creating a duplicate.
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                         # 90 tests, in-memory SQLite, ~4 s
+pytest                         # 92 tests, in-memory SQLite, ~4 s
 ruff check . && ruff format --check .
 
 # Same suite against a real PostgreSQL database (it creates and drops the tables):
